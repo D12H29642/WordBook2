@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>영남고 기말 단어장 (최신 통합)</title>
+  <style>
+    body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; padding: 12px; background-color: #f9f9f9; }
+    h2 { text-align: center; margin: 15px 0 20px; color: #333; }
+    
+    #controls { text-align: center; margin-bottom: 15px; }
+    #btn-reverse {
+      background-color: #007bff; color: white; border: none; padding: 10px 20px;
+      border-radius: 6px; font-size: 1rem; cursor: pointer; transition: background 0.2s;
+    }
+    #btn-reverse:hover { background-color: #0056b3; }
+
+    #counters { font-weight: bold; margin-bottom: 15px; text-align:center; font-size: 1.1em; }
+    
+    .table-wrapper { overflow-x: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 8px; background: white; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
+    
+    th, td { border-bottom: 1px solid #eee; padding: 12px 10px; text-align: left; vertical-align: middle; }
+    th { background: #f1f3f5; color: #495057; font-weight: bold; border-top: 2px solid #dee2e6; }
+    tr:last-child td { border-bottom: none; }
+    
+    /* 가리기 효과 */
+    .conceal { 
+      color: transparent; 
+      text-shadow: 0 0 8px rgba(0,0,0,0.5); 
+      background-color: #e9ecef; 
+      border-radius: 4px;
+      cursor: pointer; 
+      user-select: none;
+    }
+    
+    /* 상태 표시 */
+    .unknown td { background-color: #fff5f5; }
+    .unknown .col-eng, .unknown .col-mean { color: #e03131 !important; font-weight: bold; }
+    .known td { background-color: #f8f9fa; color: #adb5bd; }
+    
+    /* 버튼 스타일 */
+    button { cursor: pointer; border: 1px solid #ced4da; background: white; border-radius: 4px; }
+    .speak { 
+      font-size: 1.2em; border: none; background: none; 
+      cursor: pointer; padding: 0 0 0 5px; vertical-align: middle;
+    }
+    .col-act { white-space: nowrap; width: 120px; text-align: center; }
+    .btn-known { margin-right: 5px; color: #2b8a3e; border-color: #2b8a3e; padding: 4px 8px; }
+    .btn-known:hover { background: #2b8a3e; color: white; }
+    .btn-unknown { color: #c92a2a; border-color: #c92a2a; padding: 4px 8px; }
+    .btn-unknown:hover { background: #c92a2a; color: white; }
+
+  </style>
+</head>
+<body>
+  <h2>영남고 기말 최종 단어장</h2>
+
+  <div id="controls">
+    <button id="btn-reverse" type="button">🔄 단어/뜻 뒤집기</button>
+  </div>
+
+  <div id="counters">암기: 0 | 미암기: 0</div>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 40%">영어</th>
+          <th style="width: 40%">뜻</th>
+          <th>상태</th>
+        </tr>
+      </thead>
+      <tbody id="word-body"></tbody>
+    </table>
+  </div>
+
+  <script>
+    // 요청하신 전체 단어 리스트 (오타 자동 보정 적용됨)
+    const WORDS = [
+      { eng: "in advance", mean: "사전에" },
+      { eng: "inspect", mean: "검사하다" },
+      { eng: "ridiculous", mean: "우스꽝스러운" },
+      { eng: "accomplish", mean: "성취하다" },
+      { eng: "estimate", mean: "추정하다" },
+      { eng: "tune in", mean: "(남의 감정에) 귀를 기울이다" },
+      { eng: "set about", mean: "시작하다" },
+      { eng: "involved", mean: "열중하는" },
+      { eng: "committed", mean: "몰입된" },
+      { eng: "severe", mean: "심각한" },
+      { eng: "browse", mean: "훑어보다" },
+      { eng: "regardless of", mean: "~에 관계없이" },
+      { eng: "proactive", mean: "진취적인" },
+      { eng: "resume", mean: "이력서" },
+      { eng: "excessive", mean: "지나친" },
+      { eng: "incentive", mean: "동기" },
+      { eng: "engage in", mean: "참여하다" },
+      { eng: "scapegoat", mean: "희생양" },
+      { eng: "dirt", mean: "오물, 더러운 것" },
+      { eng: "emphasize", mean: "강조하다" },
+      { eng: "lie", mean: "놓여있다." },
+      { eng: "deserve", mean: "받을 만하다" },
+      { eng: "mislead", mean: "속이다" },
+      { eng: "cut back on", mean: "~을 줄이다" },
+      { eng: "reveal", mean: "밝히다" },
+      { eng: "carry out", mean: "~을 수행하다" },
+      { eng: "vital", mean: "매우 중요한" },
+      { eng: "ensure", mean: "보장하다" }, // ebsure 수정됨
+      { eng: "indication", mean: "표시" },
+      { eng: "prime", mean: "최적의, 최고의" },
+      { eng: "delightful", mean: "즐거운" },
+      { eng: "trustworthy", mean: "신뢰할 만한" },
+      { eng: "bet", mean: "확신하다. 보증하다" },
+      { eng: "dangerously", mean: "위험할 정도로" },
+      { eng: "wiser", mean: "더 현명한" },
+      { eng: "fit", mean: "알맞다, 적합하다" },
+      { eng: "construct", mean: "구성하다" },
+      { eng: "gratitude", mean: "감사" },
+      { eng: "premise", mean: "전제" },
+      { eng: "approximately", mean: "대략" },
+      { eng: "raise", mean: "기르다." },
+      { eng: "confinement", mean: "갇힘" },
+      { eng: "protest", mean: "항의하다" },
+      { eng: "regulation", mean: "통제" },
+      { eng: "related to", mean: "~에 관련된" },
+      { eng: "transformative", mean: "(사람을) 변화시키는" },
+      { eng: "distinguish", mean: "구별하다." },
+      { eng: "nuanced", mean: "미묘한 차이가 있는" },
+      { eng: "pose", mean: "제기하다, 주다, 부과하다" },
+      { eng: "commit to", mean: "~에 전념하다." },
+      { eng: "evident", mean: "분명한" },
+      { eng: "ready-made", mean: "이미 주어진" },
+      { eng: "control", mean: "통제력" }, // contrl 수정됨
+      { eng: "underneath", mean: "~의 밑에" },
+      { eng: "prescribe", mean: "규정하다. 지시하다." },
+      { eng: "mobility", mean: "유동성" },
+      { eng: "impose", mean: "부여하다." },
+      { eng: "disagreement", mean: "의견충돌" },
+      { eng: "navigate", mean: "운전하다." },
+      { eng: "critical", mean: "중요한" },
+      { eng: "likelihood", mean: "가능성" },
+      { eng: "be rooted in", mean: "~에 뿌리 박혀 있다." },
+      { eng: "get along with", mean: "~와 잘지내다." },
+      { eng: "relate", mean: "마음이 통하다" },
+      { eng: "flock", mean: "모이다." },
+      { eng: "reduction", mean: "축소, 감소" },
+      { eng: "fertilizer", mean: "비료" },
+      { eng: "uptake", mean: "흡수" },
+      { eng: "acidic", mean: "산성의" },
+      { eng: "earthworm", mean: "지렁이" },
+      { eng: "essential nutrient", mean: "필수 영양소" },
+      { eng: "content", mean: "함류량, 내용물" },
+      { eng: "accumulation", mean: "축적, 누적" },
+      { eng: "firm", mean: "회사" },
+      { eng: "dismiss", mean: "해고하다." }, // dismise 수정됨
+      { eng: "picture", mean: "상상하다. 그리다." },
+      { eng: "unemployment", mean: "실업" },
+      { eng: "leakage", mean: "누출, 누수" },
+      { eng: "earnings", mean: "수입" },
+      { eng: "genuine", mean: "진짜의" },
+      { eng: "wrinkle", mean: "주름(살)" },
+      { eng: "noticeably", mean: "눈에 띄게" },
+      { eng: "obvious", mean: "명확한" },
+      { eng: "insincere", mean: "진실하지 못한" }, // insinere 수정됨
+      { eng: "primarily", mean: "주로" },
+      { eng: "pesticide", mean: "살충제" },
+      { eng: "recession", mean: "경기 후퇴" },
+      { eng: "unfavorable", mean: "호의적이지 않은, 거슬리는" },
+      { eng: "tough", mean: "강한" },
+      { eng: "handle", mean: "감당하다." },
+      { eng: "coordinate", mean: "통합하다." },
+      { eng: "conservationist", mean: "환경보호 활동가" },
+      { eng: "authority", mean: "당국" },
+      { eng: "individual", mean: "개체, 개개의" },
+      { eng: "supplement", mean: "보충하다" },
+      { eng: "remove", mean: "옮기다. 제거하다" },
+      { eng: "release", mean: "놓아주다. 방출하다" },
+      { eng: "leftover", mean: "남은 음식" },
+      { eng: "spoil", mean: "상하다." },
+      { eng: "generous", mean: "관대한 후한." },
+      { eng: "spill", mean: "넘치다" },
+      { eng: "disastrous", mean: "처참한, 피해가 막심한" },
+      { eng: "floodplain", mean: "범람원" },
+      { eng: "wetland", mean: "습지" },
+      { eng: "variation", mean: "변형, 변화" },
+      { eng: "ever-changing", mean: "끊임없이 늘 변화하는" },
+      { eng: "shoreline", mean: "강가" },
+      { eng: "deliberately", mean: "의도적으로" },
+      { eng: "captive breeding", mean: "포획사육" },
+      { eng: "hatch", mean: "부화하다" },
+      { eng: "reciprocal", mean: "상호 이타주의" },
+      { eng: "primates", mean: "영장류" },
+      { eng: "capacity", mean: "수용능력" },
+      { eng: "imitate", mean: "모방하다" },
+      { eng: "interval", mean: "간격" },
+      { eng: "in public", mean: "공공연히" },
+      { eng: "exaggerate", mean: "과장하다." },
+      { eng: "underestimate", mean: "과소평가하다." },
+      { eng: "be supposed to do", mean: "~해야 한다." },
+      { eng: "sort out", mean: "가려내다." },
+      { eng: "negotiate", mean: "협상하다." },
+      { eng: "be unburdened", mean: "벗어나다." }, // enburdened -> unburdened 수정
+      { eng: "met", mean: "충족하다." },
+      { eng: "hold ~in", mean: "~을 참다." },
+      { eng: "distress", mean: "괴로움" },
+      { eng: "eliminate", mean: "배설하다, 없애다" },
+      { eng: "idiosyncratic", mean: "(개인에게) 특유한" },
+      { eng: "scattered", mean: "분산된" },
+      { eng: "cloak", mean: "망토" },
+      { eng: "sparkle", mean: "반짝임" },
+      { eng: "handy", mean: "편리한" },
+      { eng: "deep-sea", mean: "심해의" },
+      { eng: "terms", mean: "조항, 조건" },
+      { eng: "attract", mean: "유혹하다. 유인하다." },
+      { eng: "attractant", mean: "유인(물질)" }, // attractont 수정됨
+      { eng: "bond", mean: "결속, 유대" },
+      { eng: "conduct", mean: "수행하다." },
+      { eng: "pull together", mean: "모으다" },
+      { eng: "assume", mean: "가정하다" },
+      { eng: "standpoint", mean: "경지, 관점" },
+      { eng: "confront", mean: "마주하다." },
+      { eng: "blend", mean: "혼합하다. 섞다." },
+      { eng: "internalize", mean: "내면화 하다." },
+      { eng: "artifact", mean: "창작물" },
+      { eng: "framework", mean: "틀, 체제" },
+      { eng: "frustrating", mean: "불만스러운" },
+      { eng: "make sense", mean: "의미가 통하다. 타당하다." },
+      { eng: "commitment", mean: "약속, 헌신" },
+      { eng: "astonishing", mean: "놀라운" },
+      { eng: "willingness", mean: "기꺼이하는 마음" },
+      { eng: "be attracted to", mean: "~에 끌리다." }, // attrancted 수정됨
+      { eng: "alert", mean: "경계하는" },
+      { eng: "all the time", mean: "항상" },
+      { eng: "stand for", mean: "~을 나타내다." },
+      { eng: "spell out", mean: "~을 상세히 다 쓰다." },
+      { eng: "approve", mean: "승낙하다" },
+      { eng: "accommodate", mean: "조절하다" },
+      { eng: "tidy", mean: "질서 정연한" },
+      { eng: "bottom line", mean: "결론" },
+      { eng: "lasting", mean: "지속적인" },
+      { eng: "encouraging", mean: "고무적인" },
+      { eng: "demonstration", mean: "실증, 증거" },
+      { eng: "practice", mean: "행동, 관행" },
+      { eng: "except", mean: "그러나" },
+      { eng: "giving rate", mean: "기부율" },
+      { eng: "glow", mean: "온기" },
+      { eng: "faculty", mean: "교직원" },
+      { eng: "expose", mean: "드러내다(노출하다)" },
+      { eng: "include and blend into", mean: "통합시키다" },
+      { eng: "stick", mean: "달라붙다, 붙다" },
+      { eng: "intensely", mean: "매우" },
+      { eng: "channel", mean: "경로" },
+      { eng: "be past", mean: "사라지다" },
+      { eng: "adequate", mean: "적당한, 충분한" },
+      { eng: "grain", mean: "곡식" },
+      { eng: "vast", mean: "방대한" },
+      { eng: "investigate", mean: "연구하다" },
+      { eng: "pile", mean: "더미" },
+      { eng: "climate crisis", mean: "기후 위기" },
+      { eng: "withholding", mean: "주지 않는 것" },
+      { eng: "to the point of discomfort", mean: "불편할 정도로" },
+      { eng: "appear to", mean: "~처럼 보인다" }, // apear 수정됨
+      { eng: "absorption", mean: "흡수" },
+      { eng: "overlook", mean: "간과하다" },
+      { eng: "prevent", mean: "막다" },
+      { eng: "wheat", mean: "밀" },
+      { eng: "Indeed", mean: "실제로" },
+      { eng: "entail", mean: "수반하다" },
+      { eng: "give for Ving", mean: "V하려 하다" },
+      { eng: "provide A with B", mean: "B를 A에게 제공하다" },
+      { eng: "S V, only to V", mean: "결국 V하다" },
+      { eng: "nor V S", mean: "S가 V하는 것도 아니다" },
+      { eng: "end up Ving", mean: "결국 V하다" },
+      { eng: "enjoy Ving", mean: "V하는 걸 즐기다" },
+      { eng: "spend A Ving", mean: "A를 V하는데 쓰다" },
+      { eng: "derive A from B", mean: "A을 B에서 얻다" },
+      { eng: "refer to A as B", mean: "A를 B라 부르다" },
+      { eng: "would rather A than B", mean: "B보다는 A를 한다" },
+      { eng: "prefer to V", mean: "V하는 걸 선호하다" },
+      { eng: "label A as B", mean: "A를 B로 이름 붙이다" },
+      { eng: "think of A as B", mean: "A를 B로 생각하다" }
+    ];
+
+    let knownCount = 0;
+    let unknownCount = 0;
+    let reversed = false;
+    let voices = [];
+
+    // --- 음성 인식(TTS) 로직 ---
+    function loadVoices() {
+      voices = window.speechSynthesis.getVoices();
+    }
+    
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+    loadVoices();
+
+    function speak(text) {
+      window.speechSynthesis.cancel(); // 중복 재생 방지
+
+      // 텍스트 정제: 
+      // 1. 괄호 안 내용 삭제
+      // 2. 특수문자 일부 처리, 영어/공백 유지
+      const cleanText = text
+        .replace(/\(.*\)/g, '') 
+        .replace(/[^a-zA-Z\s’'-]/g, '')
+        .trim();
+
+      const u = new SpeechSynthesisUtterance(cleanText);
+      u.lang = 'en-US';
+      u.rate = 0.9; 
+
+      if (voices.length > 0) {
+        // Google US English 또는 일반 US English 우선 선택
+        const preferredVoice = voices.find(v => 
+          (v.name.includes('Google') && v.lang.includes('en-US')) || 
+          v.lang === 'en-US' || 
+          v.lang.startsWith('en')
+        );
+        if (preferredVoice) {
+          u.voice = preferredVoice;
+        }
+      }
+
+      window.speechSynthesis.speak(u);
+    }
+    // ----------------------------
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, m => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]
+      ));
+    }
+
+    function updateCounters() {
+      document.getElementById('counters').textContent = `암기: ${knownCount} | 미암기: ${unknownCount}`;
+    }
+
+    function setEnglishCellContent(td, text) {
+      // 텍스트와 스피커 버튼 배치
+      td.innerHTML = `<span>${escapeHtml(text)}</span> <button class="speak" aria-label="듣기">🔊</button>`;
+      const btn = td.querySelector('.speak');
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        speak(text);
+      };
+    }
+
+    function buildTable() {
+      const tb = document.getElementById('word-body');
+      tb.innerHTML = '';
+      
+      WORDS.forEach((item) => {
+        const tr = document.createElement('tr');
+        
+        // 영어 셀
+        const tdEng = document.createElement('td');
+        tdEng.className = 'col-eng';
+        tdEng.dataset.original = item.eng;
+        setEnglishCellContent(tdEng, item.eng);
+        
+        // 뜻 셀
+        const tdMean = document.createElement('td');
+        tdMean.className = 'col-mean';
+        tdMean.dataset.meaning = item.mean;
+        tdMean.textContent = item.mean;
+        
+        // 버튼 셀
+        const tdAct = document.createElement('td');
+        tdAct.className = 'col-act';
+        tdAct.innerHTML = `<button class="btn-known">암기</button><button class="btn-unknown">미암기</button>`;
+        
+        tr.append(tdEng, tdMean, tdAct);
+        tb.appendChild(tr);
+      });
+      
+      knownCount = 0; unknownCount = 0; updateCounters(); applyConceal();
+    }
+
+    function mark(btn, type) {
+      const row = btn.closest('tr');
+      const tb  = row.parentNode;
+      
+      if (type === 'known') {
+        if (!row.classList.contains('known')) {
+          knownCount++;
+          if (row.classList.contains('unknown')) unknownCount--;
+          row.classList.add('known');
+          row.classList.remove('unknown');
+        }
+      } else if (type === 'unknown') {
+        if (!row.classList.contains('unknown')) {
+          unknownCount++;
+          if (row.classList.contains('known')) knownCount--;
+          row.classList.add('unknown');
+          row.classList.remove('known');
+          tb.insertBefore(row, tb.firstChild);
+        }
+      }
+      updateCounters();
+    }
+
+    function applyConceal() {
+      document.querySelectorAll('#word-body tr').forEach(r => {
+        const eng = r.querySelector('.col-eng');
+        const mean = r.querySelector('.col-mean');
+        if(!eng || !mean) return;
+
+        // 초기화
+        eng.classList.remove('conceal');
+        mean.classList.remove('conceal');
+        
+        // 내용 복구 (스피커 버튼 포함)
+        if(!eng.querySelector('button')) setEnglishCellContent(eng, eng.dataset.original);
+        mean.textContent = mean.dataset.meaning;
+
+        // 가리기 적용
+        const target = reversed ? eng : mean;
+        target.textContent = '클릭해 보기';
+        target.classList.add('conceal');
+      });
+    }
+
+    function handleConcealClick(td) {
+      if (!td.classList.contains('conceal')) {
+        // 이미 보이는 상태면 다시 가리기 (토글)
+        const row = td.closest('tr');
+        const eng = row.querySelector('.col-eng');
+        const mean = row.querySelector('.col-mean');
+        
+        const target = reversed ? eng : mean;
+        if (td === target) {
+          td.textContent = '클릭해 보기';
+          td.classList.add('conceal');
+        }
+        return;
+      }
+
+      // 가려진 상태 -> 보여주기
+      if (td.classList.contains('col-eng')) {
+        setEnglishCellContent(td, td.dataset.original);
+      } else {
+        td.textContent = td.dataset.meaning;
+      }
+      td.classList.remove('conceal');
+    }
+
+    function reverseCols() {
+      reversed = !reversed;
+      const ths = document.querySelectorAll('thead th');
+      if (reversed) {
+        ths[0].textContent = "뜻";
+        ths[1].textContent = "영어";
+      } else {
+        ths[0].textContent = "영어";
+        ths[1].textContent = "뜻";
+      }
+      
+      document.querySelectorAll('#word-body tr').forEach(r => {
+        const cells = Array.from(r.children);
+        if (cells.length < 3) return;
+        r.append(cells[1], cells[0], cells[2]);
+      });
+      applyConceal();
+    }
+
+    // 이벤트 리스너 설정
+    document.addEventListener('click', (e) => {
+      if (e.target.matches('.btn-known')) {
+        mark(e.target, 'known');
+        return;
+      }
+      if (e.target.matches('.btn-unknown')) {
+        mark(e.target, 'unknown');
+        return;
+      }
+      const td = e.target.closest('td');
+      if (td && (td.classList.contains('col-eng') || td.classList.contains('col-mean'))) {
+        handleConcealClick(td);
+      }
+    });
+
+    document.getElementById('btn-reverse').addEventListener('click', reverseCols);
+
+    buildTable();
+  </script>
+</body>
+</html>
